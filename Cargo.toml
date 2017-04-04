@@ -1,0 +1,11 @@
+[package]
+name = "ocl-repro"
+version = "0.1.0"
+authors = ["Ty Overby <ty@pre-alpha.com>"]
+
+[[bin]]
+name = "demo"
+path = "./src/main.rs"
+
+[dependencies]
+ocl = "0.12.*"
