@@ -11,7 +11,7 @@ __kernel void kern(__global float* const res)
     ulong v = 0;
     for (ulong i = 0; i < idx * idx; i++) {
         v += i;
-        v *= 2;
+        // v *= 2;
     }
     res[idx] = (float) v;
 }
@@ -20,16 +20,28 @@ __kernel void kern(__global float* const res)
 fn main() {
     let (platform, device) = first_gpu();
     let context = Context::builder().devices(device).platform(platform).build().unwrap();
-    let program = ProgramBuilder::new().src(PROGRAM).devices(device).build(&context).unwrap();
-    let queue = Queue::new(&context, device).unwrap();
-    let kernel = Kernel::new("kern", &program, &queue).unwrap();
-    let buff = Buffer::<f32>::new(queue.clone(), None, [500 * 500], None).unwrap();
-    kernel.gws([500 * 500]).arg_buf(&buff).enq().unwrap();
-    queue.finish();
+    let program = ProgramBuilder::new()
+        .src(PROGRAM)
+        .devices(device)
+        .cmplr_opt("-cl-denorms-are-zero -cl-fast-relaxed-math")
+        .build(&context).unwrap();
+    let queue = Queue::new(&context, device, Some(flags::QUEUE_PROFILING_ENABLE)).unwrap();
+    let work_size = 250000;
+    let buff = Buffer::<f32>::builder()
+        .queue(queue.clone())
+        .dims(work_size)
+        .build().unwrap();
+    let kernel = Kernel::new("kern", &program).unwrap()
+        .queue(queue.clone())
+        .gws(work_size)
+        .arg_buf(&buff);
+    
+    kernel.enq().unwrap();
+    queue.finish().unwrap();
 
-    let mut out = vec![2.0; 500 * 500];
+    let mut out = vec![2.0; work_size];
     buff.read(&mut out).enq().unwrap();
-    println!("{:?}", out);
+    println!("Result count: {}", out.len());
 }
 
 pub fn first_gpu() -> (Platform, Device) {

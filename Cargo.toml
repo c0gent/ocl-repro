@@ -8,4 +8,5 @@ name = "demo"
 path = "./src/main.rs"
 
 [dependencies]
-ocl = "0.12.*"
+# ocl = "0.12.*"
+ocl = { version = "0.12.0", git = "https://github.com/cogciprocate/ocl" }
